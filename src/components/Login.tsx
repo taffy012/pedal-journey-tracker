@@ -5,17 +5,20 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { LogIn } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const Login: React.FC = () => {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await login(email, password);
       toast.success('Welcome back!');
+      navigate('/'); // Redirect to home page after successful login
     } catch (error) {
       toast.error('Failed to login');
     }
