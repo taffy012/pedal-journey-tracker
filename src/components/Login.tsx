@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { LogIn } from 'lucide-react';
+import { Bike } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -18,49 +18,65 @@ const Login: React.FC = () => {
     try {
       await login(email, password);
       toast.success('Welcome back!');
-      navigate('/'); // Redirect to home page after successful login
+      navigate('/');
     } catch (error) {
       toast.error('Failed to login');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-      <Card className="w-full max-w-md p-8 animate-fade-in">
-        <div className="flex justify-center mb-8">
-          <LogIn className="w-12 h-12 text-primary" />
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-gray-50 to-gray-100">
+      <div className="w-full max-w-md space-y-8">
+        <div className="flex flex-col items-center">
+          <div className="bg-primary rounded-full p-4 mb-4">
+            <Bike className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="mt-2 text-3xl font-bold text-gray-900">Welcome Back</h2>
+          <p className="mt-2 text-sm text-gray-600">Track your rides with precision</p>
         </div>
-        
-        <h1 className="text-2xl font-bold text-center mb-8">Welcome Back</h1>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full"
-              required
-            />
+
+        <Card className="p-6 bg-white/80 backdrop-blur-sm shadow-xl border-0 animate-fade-in">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-12 text-lg border-gray-200 focus:border-primary"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-12 text-lg border-gray-200 focus:border-primary"
+                required
+              />
+            </div>
+            
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-lg bg-primary hover:bg-primary/90 transition-colors duration-200"
+            >
+              Sign In
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
+              <a href="#" className="text-primary hover:text-primary/90 font-medium">
+                Sign up
+              </a>
+            </p>
           </div>
-          
-          <div>
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full"
-              required
-            />
-          </div>
-          
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
-            Sign In
-          </Button>
-        </form>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };
