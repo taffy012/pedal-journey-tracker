@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bike, Pause, Play, Stop } from 'lucide-react';
+import { Bike, Pause, Play, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -172,7 +172,7 @@ const RideTracker: React.FC = () => {
                 onClick={stopTracking}
                 variant="destructive"
               >
-                <Stop className="w-4 h-4 mr-2" />
+                <Square className="w-4 h-4 mr-2" />
                 Stop
               </Button>
             </>
