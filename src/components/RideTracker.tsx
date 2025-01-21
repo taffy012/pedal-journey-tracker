@@ -110,9 +110,9 @@ const RideTracker: React.FC = () => {
   };
 
   const pauseTracking = () => {
-    if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
-      setWatchId(null);
+    if (watchId.current !== null) {
+      navigator.geolocation.clearWatch(watchId.current);
+      watchId.current = null;
     }
     setIsPaused(true);
   };
