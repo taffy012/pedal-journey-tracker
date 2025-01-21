@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bike, Pause, Play, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -8,6 +8,8 @@ interface Position {
   latitude: number;
   longitude: number;
   timestamp: number;
+  accuracy: number;
+  speed: number | null;
 }
 
 const RideTracker: React.FC = () => {
@@ -16,35 +18,45 @@ const RideTracker: React.FC = () => {
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [distance, setDistance] = useState(0);
   const [positions, setPositions] = useState<Position[]>([]);
-  const [watchId, setWatchId] = useState<number | null>(null);
+  const watchId = useRef<number | null>(null);
+  const speedBuffer = useRef<number[]>([]);
 
   const calculateSpeed = (position: GeolocationPosition) => {
-    if (position.coords.speed !== null) {
-      // Convert m/s to km/h
-      return position.coords.speed * 3.6;
+    const speed = position.coords.speed !== null ? position.coords.speed * 3.6 : calculateSpeedFromPositions();
+    
+    // Use a rolling average for smoother speed readings
+    speedBuffer.current.push(speed);
+    if (speedBuffer.current.length > 5) {
+      speedBuffer.current.shift();
     }
-    return 0;
+    
+    const averageSpeed = speedBuffer.current.reduce((a, b) => a + b, 0) / speedBuffer.current.length;
+    return Math.max(0, averageSpeed); // Ensure speed is never negative
   };
 
-  const calculateDistance = (newPosition: Position) => {
-    if (positions.length === 0) return 0;
+  const calculateSpeedFromPositions = () => {
+    if (positions.length < 2) return 0;
     
-    const lastPosition = positions[positions.length - 1];
+    const lastTwo = positions.slice(-2);
+    const distance = calculateDistance(lastTwo[0], lastTwo[1]);
+    const timeDiff = (lastTwo[1].timestamp - lastTwo[0].timestamp) / 1000; // in seconds
+    
+    return (distance / timeDiff) * 3600; // Convert to km/h
+  };
+
+  const calculateDistance = (pos1: Position, pos2: Position) => {
     const R = 6371; // Earth's radius in km
-    
-    const lat1 = lastPosition.latitude * Math.PI / 180;
-    const lat2 = newPosition.latitude * Math.PI / 180;
+    const lat1 = pos1.latitude * Math.PI / 180;
+    const lat2 = pos2.latitude * Math.PI / 180;
     const dLat = lat2 - lat1;
-    const dLon = (newPosition.longitude - lastPosition.longitude) * Math.PI / 180;
+    const dLon = (pos2.longitude - pos1.longitude) * Math.PI / 180;
     
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
               Math.cos(lat1) * Math.cos(lat2) * 
               Math.sin(dLon/2) * Math.sin(dLon/2);
     
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const d = R * c;
-    
-    return d;
+    return R * c;
   };
 
   const startTracking = () => {
@@ -59,14 +71,30 @@ const RideTracker: React.FC = () => {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           timestamp: position.timestamp,
+          accuracy: position.coords.accuracy,
+          speed: position.coords.speed,
         };
 
-        setPositions(prev => [...prev, newPosition]);
-        setCurrentSpeed(calculateSpeed(position));
-        setDistance(prev => prev + calculateDistance(newPosition));
+        // Only record position if accuracy is good enough (less than 20 meters)
+        if (position.coords.accuracy <= 20) {
+          setPositions(prev => {
+            const updatedPositions = [...prev, newPosition];
+            if (updatedPositions.length > 1) {
+              const newDistance = calculateDistance(
+                updatedPositions[updatedPositions.length - 2],
+                newPosition
+              );
+              setDistance(prev => prev + newDistance);
+            }
+            return updatedPositions;
+          });
+
+          const speed = calculateSpeed(position);
+          setCurrentSpeed(speed);
+        }
       },
       (error) => {
-        toast.error(`Error: ${error.message}`);
+        toast.error(`Location error: ${error.message}`);
       },
       {
         enableHighAccuracy: true,
@@ -75,8 +103,9 @@ const RideTracker: React.FC = () => {
       }
     );
 
-    setWatchId(id);
+    watchId.current = id;
     setIsTracking(true);
+    speedBuffer.current = [];
     toast.success("Ride tracking started!");
   };
 
@@ -94,17 +123,27 @@ const RideTracker: React.FC = () => {
   };
 
   const stopTracking = () => {
-    if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
-      setWatchId(null);
+    if (watchId.current !== null) {
+      navigator.geolocation.clearWatch(watchId.current);
+      watchId.current = null;
     }
+    
+    if (positions.length < 2) {
+      toast.error("Ride too short to save");
+      return;
+    }
+
+    // Calculate average speed for the entire ride
+    const totalTime = (positions[positions.length - 1].timestamp - positions[0].timestamp) / 1000 / 3600; // in hours
+    const averageSpeed = distance / totalTime;
     
     // Save ride data
     const rideData = {
       date: new Date().toISOString(),
       distance,
-      averageSpeed: currentSpeed,
+      averageSpeed,
       positions,
+      duration: totalTime * 3600, // in seconds
     };
     
     const savedRides = JSON.parse(localStorage.getItem('rides') || '[]');
@@ -116,6 +155,7 @@ const RideTracker: React.FC = () => {
     setCurrentSpeed(0);
     setDistance(0);
     setPositions([]);
+    speedBuffer.current = [];
     
     toast.success("Ride saved successfully!");
   };

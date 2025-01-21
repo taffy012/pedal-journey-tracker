@@ -1,16 +1,21 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { Calendar, Clock, MapPin } from 'lucide-react';
+import { Calendar, Clock, MapPin, Activity } from 'lucide-react';
+
+interface Position {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+  accuracy: number;
+  speed: number | null;
+}
 
 interface Ride {
   date: string;
   distance: number;
   averageSpeed: number;
-  positions: Array<{
-    latitude: number;
-    longitude: number;
-    timestamp: number;
-  }>;
+  positions: Position[];
+  duration: number;
 }
 
 const RideHistory: React.FC = () => {
@@ -18,7 +23,9 @@ const RideHistory: React.FC = () => {
 
   React.useEffect(() => {
     const savedRides = JSON.parse(localStorage.getItem('rides') || '[]');
-    setRides(savedRides);
+    setRides(savedRides.sort((a: Ride, b: Ride) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    ));
   }, []);
 
   const formatDate = (dateString: string) => {
@@ -30,11 +37,13 @@ const RideHistory: React.FC = () => {
     });
   };
 
-  const calculateDuration = (positions: Ride['positions']) => {
-    if (positions.length < 2) return '0 min';
-    const duration = (positions[positions.length - 1].timestamp - positions[0].timestamp) / 1000; // in seconds
-    const minutes = Math.floor(duration / 60);
-    return `${minutes} min`;
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
   };
 
   return (
@@ -43,28 +52,34 @@ const RideHistory: React.FC = () => {
       
       <div className="space-y-4">
         {rides.map((ride, index) => (
-          <Card key={index} className="p-4 hover:shadow-lg transition-shadow animate-fade-in">
-            <div className="flex items-center justify-between">
+          <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-4">
                 <Calendar className="w-5 h-5 text-primary" />
                 <span className="font-medium">{formatDate(ride.date)}</span>
               </div>
               
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
                 <Clock className="w-5 h-5 text-gray-500" />
-                <span>{calculateDuration(ride.positions)}</span>
+                <span>{formatDuration(ride.duration)}</span>
               </div>
             </div>
             
-            <div className="mt-4 grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <p className="text-sm text-gray-500">Distance</p>
-                <p className="text-xl font-bold">{ride.distance.toFixed(2)} km</p>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="flex items-center space-x-3">
+                <MapPin className="w-5 h-5 text-gray-500" />
+                <div>
+                  <p className="text-sm text-gray-500">Distance</p>
+                  <p className="text-xl font-bold">{ride.distance.toFixed(2)} km</p>
+                </div>
               </div>
               
-              <div className="text-center">
-                <p className="text-sm text-gray-500">Avg Speed</p>
-                <p className="text-xl font-bold">{ride.averageSpeed.toFixed(1)} km/h</p>
+              <div className="flex items-center space-x-3">
+                <Activity className="w-5 h-5 text-gray-500" />
+                <div>
+                  <p className="text-sm text-gray-500">Avg Speed</p>
+                  <p className="text-xl font-bold">{ride.averageSpeed.toFixed(1)} km/h</p>
+                </div>
               </div>
             </div>
           </Card>
